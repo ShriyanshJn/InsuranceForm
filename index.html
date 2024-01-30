@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/style.css">
+    <link href='https://fonts.googleapis.com/css?family=Josefin Sans' rel='stylesheet'>
+    <script src="/index.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.js"
+        integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
+
+    <script>
+        $(document).ready(function () {
+            fetch('https://ipru.policybazaar.com/MaxLifeAPIs/MasterApi/api/Master/GetAllCountries')
+                // getting stream to JSON so that we can use it in JS
+                .then(res => {
+                    return res.json();
+                }).then(data => {
+                    const countryDropDown = document.getElementById('ddlCountry')
+                    const stateDropDown = document.getElementById('ddlState')
+                    const cityDropDown = document.getElementById('ddlCity')
+                    data["countryList"].forEach(country => {
+                        let el = document.createElement('option')
+                        el.value = country.countryId
+                        el.innerHTML = country.countryName
+                        countryDropDown.appendChild(el)
+                    });
+                    stateDropDown.disabled = true
+                    cityDropDown.disabled = true
+                    countryDropDown.addEventListener('change', async () => {
+                        const selectedCountry = countryDropDown.value
+                        if (selectedCountry == '392') {
+                            await fetch('https://ipru.policybazaar.com/MaxLifeAPIs/MasterApi/api/Master/GetAllStates?productPlanId=1')
+                                .then(res => {
+                                    return res.json()
+                                }).then(data => {
+                                    data["stateList"].forEach(state => {
+                                        let el = document.createElement('option')
+                                        el.innerHTML = state.stateName
+                                        el.value = state.stateId
+                                        stateDropDown.appendChild(el)
+                                    })
+                                })
+                            stateDropDown.disabled = false
+                            // cityDropDown.disabled = false
+
+                        } else {
+                            stateDropDown.disabled = true
+                            cityDropDown.disabled = true
+                            stateDropDown.value = ''
+                            cityDropDown.value = ''
+                        }
+                    });
+                    stateDropDown.addEventListener('change', async () => {
+                        const selectedStateId = stateDropDown.value
+                        if (selectedStateId) {
+                            await fetch(`https://ipru.policybazaar.com/MaxLifeAPIs/MasterApi/api/Master/GetAllCities?productPlanId=1&stateId=${selectedStateId}`)
+                                .then(res => {
+                                    return res.json()
+                                }).then(data => {
+                                    cityDropDown.innerHTML = '<option value="-1">Select City</option>'
+                                    if (data["cityList"]) {
+                                        data["cityList"].forEach(city => {
+                                            let el = document.createElement('option')
+                                            el.innerHTML = city.cityName
+                                            el.value = city.cityId
+                                            cityDropDown.appendChild(el)
+                                        })
+                                    }
+                                })
+                            cityDropDown.disabled = false
+                        } else {
+                            cityDropDown.disabled = true
+                            cityDropDown.value = ''
+                        }
+                    });
+                });
+            var sortColumn = '';
+            var sortOrder = '';
+            function applySorting() {
+                if (sortColumn !== '' && sortOrder !== '') {
+                    var rows = $('#tbody').find('tr').get();
+                    rows.sort(function (a, b) {
+                        var A = $(a).children('td').eq(sortColumn).text().toUpperCase()
+                        var B = $(b).children('td').eq(sortColumn).text().toUpperCase()
+                        if (A < B) {
+                            return (sortOrder === 'asc') ? -1 : 1
+                        }
+                        if (A > B) {
+                            return (sortOrder === 'asc') ? 1 : -1
+                        }
+                        return 0;
+                    });
+                    $('#tbody').empty();
+                    $.each(rows, function (index, row) {
+                        $('#tbody').append(row);
+                    });
+                }
+            }
+            $('th').click(function () {
+                var column = $(this).index()
+                if (column !== sortColumn) {
+                    sortColumn = column
+                    sortOrder = 'asc'
+                } else {
+                    sortOrder = (sortOrder === 'asc') ? 'desc' : 'asc'
+                }
+                applySorting();
+            });
+            $('#searchInput').on('input', function () {
+                var searchText = $(this).val().toLowerCase();
+                $('#tbody tr').each(function () {
+                    var rowText = $(this).text().toLowerCase()
+                    if (rowText.includes(searchText)) {
+                        $(this).show();
+                    } else {
+                        $(this).hide()
+                    }
+                });
+                applySorting()
+            });
+        });
+    </script>
+</head>
+
+<body>
+    <div id="insuranceformdiv" style="display: none;">
+        <header>
+            <div id='topTitle'>
+                Insurance Form
+            </div>
+        </header>
+        <div>
+            <form class="form" id="form1" novalidate target="_self" method="post" onsubmit="return false">
+                <div class="rowflex3">
+                    <div style="width: 18%;">
+                        <label class="req labname">First Name</label>
+                        <br>
+                        <input class="fieldbox" id="firstname" name="firstname" type="text"
+                            onblur="validateFirstName()">
+                        <span id="firstnameerror" class="error"></span>
+                    </div>
+                    <div style="width: 18%;">
+                        <label class="labname">Middle Name</label>
+                        <br>
+                        <input class="fieldbox" id="middlename" name="middlename" type="text"
+                            onblur="validateMiddleName()">
+                        <span id="middlenameerror" class="error"></span>
+                    </div>
+                    <div style="width: 18%;">
+                        <label class="req labname">Last Name</label>
+                        <br>
+                        <input class="fieldbox" id="lastname" name="lastname" type="text" onblur="validateLastName()">
+                        <span id="lastnameerror" class="error"></span>
+                    </div>
+                </div>
+                <div style="margin: 0px 76px;">
+                    <label class="req labname">Address</label>
+                    <br>
+                    <textarea style="height: 72px; width: 98.5%; vertical-align: top; padding: 8px;" type="text"
+                        name="address" id="address" onblur="validateAddress()"></textarea>
+                    <span id="addresserror" class="error"></span>
+                </div>
+                <div class="rowflex2">
+                    <div class="twosections">
+                        <label class="req labname">Email</label>
+                        <br>
+                        <input class="fieldbox" id="email" name="email" type="email" style="width: 150%;"
+                            onblur="validateEmail()">
+                        <span id="emailerror" class="error"></span>
+                    </div>
+                    <div class="twosections">
+                        <label class="req labname">Phone No.</label>
+                        <br>
+                        <input class="fieldbox" id="phoneno" name="phoneno" type="tel" maxlength="10"
+                            onblur="validatePhoneNo()">
+                        <span id="phonenoerror" class="error"></span>
+                    </div>
+                </div>
+                <div>
+                    <button style="margin: 20px 50px 30px 73px; padding: 10px 40px;"
+                        onclick="returnToUsersDashboard()">Back</button>
+                    <button style="margin: 20px 50px 30px 574px; padding: 10px 40px;"
+                        onclick="validateForm1()">Next</button>
+                </div>
+            </form>
+            <form class="form" id="form2" style="display: none;" novalidate target="_blank" method="post"
+                onsubmit="return false">
+                <div class="rowflex2">
+                    <div class="twosections">
+                        <label class="req labname">Date of Birth</label>
+                        <br>
+                        <input class="fieldbox" name="date" style="width: 92%; padding: 8px;" type="date" id="date"
+                            onblur="validateDoB()">
+                        <span id="dateerror" class="error"></span>
+                    </div>
+                    <div class="twosections">
+                        <label class="req labname" for="country">Country</label>
+                        <br>
+                        <select class="dropdown" id="ddlCountry" name="country" onblur="validateCountry()">
+                            <option value="-1" id="selectcountry">Select Country</option>
+                        </select>
+                        <span id="selectcountryerror" class="error"></span>
+                    </div>
+                </div>
+                <div class="rowflex2">
+                    <div class="twosections">
+                        <label class="req labname" for="state">State</label>
+                        <br>
+                        <select class="dropdown" id="ddlState" name="state" onblur="validateState()">
+                            <option value="-1">Select State</option>
+                        </select>
+                        <span id="selectstateerror" class="error"></span>
+                    </div>
+                    <div class="twosections">
+                        <label class="req labname" for="city">City</label>
+                        <br>
+                        <select class="dropdown" id="ddlCity" name="city" onblur="validateCity()">
+                            <option value="-1">Select City</option>
+                        </select>
+                        <span id="selectcityerror" class="error"></span>
+                    </div>
+                </div>
+                <div style="margin: 0 76px;">
+                    <label class="req labname" for="incomesrc">Source of Income</label>
+                    <br>
+                    <div style="display: flex; flex-direction: column;">
+                        <div class="chkbox">
+                            <input type="checkbox" id="soi1" name="business" value="business"
+                                onblur="validateCheckBox()">
+                            <label for="business" style="padding: 0 5px;">Business</label>
+                        </div>
+                        <div class="chkbox">
+                            <input type="checkbox" id="soi2" name="employment" value="employment">
+                            <label for="employment" style="padding: 0 5px;">Employment</label>
+                        </div>
+                        <div class="chkbox">
+                            <input type="checkbox" id="soi3" name="other sources" value="other sources">
+                            <label for="other sources" style="padding: 0 5px;">Other Sources</label>
+                        </div>
+                        <span id="soichkboxerror" class="error"></span>
+                    </div>
+                </div>
+                <div class="rdbtn" style="margin: 0 76px;">
+                    <label class="req labname" for="incometaxassessee">Are you income tax assessee?</label>
+                    <input type="radio" id="itay" name="itarb" value="yes">
+                    <label for="yes">Yes</label>
+                    <input type="radio" id="itan" name="itarb" value="no">
+                    <label for="no">No</label>
+                    <span id="itarberror" class="error"></span>
+                </div>
+                <div class="declarationchkbox" style="margin: 15px 76px; display: flex; flex-direction: column;">
+                    <div>
+                        <input type="checkbox" id="declaration" name="declaration" value="declaration">
+                        <label class="req" for="declaration" style="padding: 0 5px;">I hereby declare that the
+                            information
+                            provided in this
+                            form is complete, true and correct to the best of my knowledge.</label>
+                    </div>
+                    <span id="decchkboxerror" class="error"></span>
+                </div>
+                <div>
+                    <button style="margin: 20px 50px 30px 73px; padding: 10px 40px;"
+                        onclick="returnToForm1()">Back</button>
+                    <button style="margin: 20px 50px 30px 582px; padding: 10px 40px;"
+                        onclick="validateForm2('submit')">Submit</button>
+                </div>
+            </form>
+            <form id="form3" class="form" style="display: none;" novalidate
+                action="https://localhost:44366/api/InsuranceForm" target="_blank" method="post">
+                <h1 style="margin: 20px 8%;">Collected Information:</h1>
+                <br>
+                <div class="rowflex3">
+                    <div style="width: 18%;">
+                        <label class="labname" style="font-weight: 600;">First Name:</label>
+                        <span id="finalfirstname"></span>
+                    </div>
+                    <div style="width: 18%;">
+                        <label class="labname" style="font-weight: 600;">Middle Name:</label>
+                        <span id="finalmiddlename"></span>
+                    </div>
+                    <div style="width: 18%;">
+                        <label class="labname" style="font-weight: 600;">Last Name:</label>
+                        <span id="finallastname"></span>
+                    </div>
+                </div>
+                <div>
+                    <label class="labname" style="font-weight: 600; margin: 38px 0% 8px 7.5%;">Address:</label>
+                    <p id="finaladdress" , style="margin-left: 7.5%;"></p>
+                </div>
+                <div class="rowflex2" style="padding: 0px 4.7% 0px 0%;">
+                    <div style="width: 18%;">
+                        <label class="labname" style="font-weight: 600; margin-left: 5.3%;">Email:</label>
+                        <span id="finalemail" style="margin-left: 5.3%;"></span>
+                    </div>
+                    <div style="width: 18%;">
+                        <label class="labname" style="font-weight: 600;">Phone No.:</label>
+                        <span id="finalphoneno"></span>
+                    </div>
+                </div>
+                <div class="rowflex2" style="padding: 0px 4.7% 0px 0%;">
+                    <div style="width: 18%;">
+                        <label class="labname" style="font-weight: 600; margin-left: 5.3%;">Date of Birth:</label>
+                        <span id="finaldate" style="margin-left: 5.3%;"></span>
+                    </div>
+                    <div style="width: 18%; display: flex; flex-direction: column;">
+                        <label class="labname" style="font-weight: 600;">Country:</label>
+                        <span id="finalcountry"></span>
+                    </div>
+                </div>
+                <div class="rowflex2" style="padding: 0px 4.7% 0px 0%;">
+                    <div style="width: 18%; display: flex; flex-direction: column;">
+                        <label class="labname" style="font-weight: 600; margin-left: 5.3%;">State:</label>
+                        <span id="finalstate" style="margin-left: 5.3%;"></span>
+                    </div>
+                    <div style="width: 18%; display: flex; flex-direction: column;">
+                        <label class="labname" style="font-weight: 600;">City:</label>
+                        <span id="finalcity"></span>
+                    </div>
+                </div>
+                <div class="rowflex2" style="padding: 0px 4.7% 0px 0%;">
+                    <div style="width: 18%;">
+                        <label class="labname" style="font-weight: 600; margin-left: 5.3%;">Source of income:</label>
+                        <span id="finalincomesource"></span>
+                    </div>
+                    <div style="width: 18%;">
+                        <label class="labname" style="font-weight: 600;">Income tax assessee:</label>
+                        <span id="finalincometaxassessee"></span>
+                    </div>
+                </div>
+                <div>
+                    <button type="button" style="margin: 20px 50px 30px 73px; padding: 10px 40px;"
+                        onclick="returnToForm1()">Edit</button>
+                    <button type="button" style="margin: 20px 50px 30px 582px; padding: 10px 40px;"
+                        onclick="postUserData()">Confirm</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="usersdashboarddiv">
+        <header style="margin-bottom: 10px; display: flex; justify-content: space-around;">
+            <div id="topTitle">Users Dashboard</div>
+            <div>
+                <div id="newuserbtn" style="margin-left: 900px; height: 50px; margin-top: 10px; padding: 0px 20px;"
+                    onclick="addNewUser()"><img src="images/plus32.png">
+                </div>
+                <div>
+                    <input type="text" id="searchInput" style="margin-left: 660px; width: 30%; height: 20px;"
+                        placeholder="Search...">
+                </div>
+            </div>
+        </header>
+        <div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Address</th>
+                        <th>Email</th>
+                        <th>Phone Number</th>
+                        <th>Date of Birth</th>
+                        <th>Country</th>
+                        <th>State</th>
+                        <th>City</th>
+                        <th>Source of Income</th>
+                        <th>Income Tax Assessee</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody"></tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+        $(window).on('load', function () {
+            getAllUsers();
+        });
+    </script>
+</body>
+
+</html>
